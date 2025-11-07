@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>管理者ページ（地図 + 住所 + 郵便番号）</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    body { font-family: sans-serif; padding: 15px; }
+    #map { height: 350px; border: 2px solid #444; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>🔐 位置情報 管理画面</h2>
+  <input type="password" id="pass" placeholder="管理パスワード">
+  <button id="start">監視開始</button>
+
+  <p id="info">まだ位置情報がありません</p>
+  <div id="map"></div>
+
+  <script>
+    let map;
+    let marker;
+
+    function initMap() {
+      map = L.map('map').setView([35.6812, 139.7671], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      }).addTo(map);
+      marker = L.marker([35.6812, 139.7671]).addTo(map);
+    }
+
+    async function updateLocation() {
+      const password = document.getElementById('pass').value;
+      const res = await fetch('/admin/location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json();
+
+      if (data.error) return info.innerText = "❌ パスワードが違います";
+      if (!data.address) return info.innerText = "まだ位置情報が送られていません";
+
+      info.innerHTML = `🏠 住所: ${data.address}<br>📨 郵便番号: ${data.postalCode}<br>🕒 ${data.time}`;
+      marker.setLatLng([data.latitude, data.longitude]);
+      map.setView([data.latitude, data.longitude], 16);
+    }
+
+    document.getElementById('start').addEventListener('click', () => {
+      initMap();
+      updateLocation();
+      setInterval(updateLocation, 3000);
+    });
+  </script>
+</body>
+</html>

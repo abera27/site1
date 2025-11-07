@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>位置自動送信</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js");
+  }
+  </script>
+</head>
+<body>
+  <p>📡 位置情報自動送信中… (3秒ごと)</p>
+
+  <script>
+    function sendLocation() {
+      navigator.geolocation.getCurrentPosition(async pos => {
+        await fetch('/save-location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude
+          })
+        });
+      });
+    }
+    sendLocation();
+    setInterval(sendLocation, 3000);
+  </script>
+</body>
+</html>
